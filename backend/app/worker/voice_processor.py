@@ -15,6 +15,7 @@ from ..api.utils import (
     load_audio, save_audio, normalize_audio, trim_silence,
     embed_watermark_metadata, validate_audio_quality
 )
+from .asr import get_whisper_asr
 
 
 class VoiceProcessor:
@@ -279,30 +280,46 @@ class VoiceProcessor:
     def _verify_consent(self, consent_audio_path: str, expected_phrase: str) -> bool:
         """
         Verify consent by checking if the spoken phrase matches expected phrase.
-        In production, use proper ASR (Whisper, etc.)
-        For MVP, we'll do a simple check.
+        Uses Whisper ASR if available, falls back to simple duration check.
         """
-        # TODO: Implement proper ASR verification using Whisper
-        # For now, we'll assume consent is verified if audio exists and has sufficient duration
-
         try:
-            audio, sr = load_audio(consent_audio_path)
-            duration = len(audio) / sr
+            # Try to use Whisper ASR for accurate verification
+            asr = get_whisper_asr(model_size="base")
 
-            # Simple heuristic: consent audio should be 3-30 seconds
-            if duration < 3 or duration > 30:
-                print(f"⚠️ Consent audio duration suspicious: {duration:.1f}s")
-                return False
+            if asr.is_available():
+                print("🎙️  Using Whisper ASR for consent verification...")
 
-            # In production, use Whisper ASR to transcribe and compare
-            # from transformers import pipeline
-            # transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-base")
-            # transcription = transcriber(consent_audio_path)["text"]
-            # similarity = compare_strings(transcription.lower(), expected_phrase.lower())
-            # return similarity > 0.8
+                is_verified, similarity, transcription = asr.verify_consent(
+                    consent_audio_path,
+                    expected_phrase,
+                    threshold=0.75  # 75% similarity required
+                )
 
-            print("✅ Consent verification passed (simplified check)")
-            return True
+                print(f"Expected: '{expected_phrase}'")
+                print(f"Transcribed: '{transcription}'")
+                print(f"Similarity: {similarity:.1%}")
+
+                if is_verified:
+                    print("✅ Consent verification passed (Whisper ASR)")
+                else:
+                    print(f"❌ Consent verification failed (similarity {similarity:.1%} < 75%)")
+
+                return is_verified
+
+            else:
+                # Fallback: simple duration check
+                print("⚠️  Whisper not available, using fallback verification")
+
+                audio, sr = load_audio(consent_audio_path)
+                duration = len(audio) / sr
+
+                # Simple heuristic: consent audio should be 3-30 seconds
+                if duration < 3 or duration > 30:
+                    print(f"❌ Consent audio duration suspicious: {duration:.1f}s")
+                    return False
+
+                print("✅ Consent verification passed (fallback mode)")
+                return True
 
         except Exception as e:
             print(f"❌ Consent verification failed: {e}")

@@ -67,10 +67,22 @@ That's it! Open http://localhost:3000 in your browser.
 
 ### Quick Links
 
+- **[⚡ Quick Start Guide](./docs/QUICKSTART.md)** - Get up and running in 5 minutes
+- **[🚀 Deployment Guide](./docs/DEPLOYMENT.md)** - Production deployment on Mac mini
 - [Backend API Documentation](./backend/README.md)
 - [Frontend Documentation](./frontend/README.md)
 - [CLI Tool Guide](./cli/README.md)
 - [API Reference](http://localhost:8000/docs) (when running)
+- [Contributing Guide](./CONTRIBUTING.md)
+
+### Helpful Scripts
+
+```bash
+./install-mac.sh      # One-command installation
+./verify-setup.sh     # Verify installation
+./health-check.sh     # Check if everything is running
+./start-all.sh        # Start all services
+```
 
 ### Architecture
 
